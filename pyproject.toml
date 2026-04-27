@@ -16,6 +16,7 @@ dependencies = [
     "modelcif",         # PDB output (protein.py)
     "dm-tree",          # residue_constants dependency
     "huggingface_hub",  # weight download
+    "biopython",        # protein.py
 ]
 
 [project.optional-dependencies]
