@@ -1,51 +1,71 @@
-# MiniFold
+# MiniFold-MLX
 
-MiniFold if a fast model for single chain protein structure prediction. Built using the same protein language model as ESMFold, it achieves considerable speedups (up to 10-20x) and memory savings (up to 10x) at little to no cost in performance.
+An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using the [MLX](https://github.com/ml-explore/mlx) framework. Runs protein structure prediction entirely on Apple Silicon GPU/Neural Engine with no PyTorch dependency at inference time.
 
-[Paper Link](https://openreview.net/pdf?id=1p9hQTbjgo)
+## Features
+
+- Full ESM2 (3B) + MiniFold folding trunk in MLX
+- int8 ESM2 quantization via `mlx.nn.quantize` (group_size=32)
+- Custom Apple Metal SGMM gate kernel fusing LayerNorm + gating for TriangularUpdate blocks
+- `mx.compile` support on MiniFormer for reduced Metal dispatch overhead
+- 48-layer (full) and 12-layer (fast) MiniFold variants
+- Simple three-function public API: `load_model`, `predict_sequence`, `predict_batch`
+- Pre-converted weights hosted on HuggingFace for fast download-on-first-use
 
 ## Installation
 
-Then install minifold, clone the repository and install it with:
+```bash
+pip install git+https://github.com/ZacharyArdern/MiniFold-MLX
+```
 
-`pip install .`
+Requires macOS with Apple Silicon (M1 or later) and MLX >= 0.16.0.
 
-> We recommend installing in a fresh python environment.
+## Weights
 
-## Inference
-
-To run prediction, use the following:
-
-`python predict.py example.fasta --out_dir PATH --cache PATH`
-
-> The fasta header will be used to name the output file, set them wisely!
-
-Options are available:
-
-- `kernels`: uses our custom triton kernels
-- `compile`: use torch.compile with dynamic shapes enabled
-- `model_size`: one of `12L` or `48L` (default) 
-- `token_per_batch`: maximum number of tokens that fit in your GPU, by default 2048
-
-## Training
-
-We train the model using AFDB proteins filtered to > 70 global plddt and selected for diversity using uniref30 as initial list, pre-filtering. You may use the provided train.py script and the YAML configs under `configs`.
-
-## Kernels
-
-We developed two triton kernels for this work. You can find them [here](https://github.com/jwohlwend/minifold/tree/main/minifold/model/kernels).
-
-## Cite
+Pre-converted MLX weights (finetuned ESM2 + MiniFold 48L/12L) are available on HuggingFace:
 
 ```
-@article{
-  wohlwend2025minifold,
-  title={MiniFold: Simple, Fast, and Accurate Protein Structure Prediction},
-  author={Jeremy Wohlwend and Mateo Reveiz and Matt McPartlon and Axel Feldmann and Wengong Jin and Regina Barzilay},
-  journal={Transactions on Machine Learning Research},
-  issn={2835-8856},
-  year={2025},
-  url={https://openreview.net/forum?id=1p9hQTbjgo},
-  note={Featured Certification}
-}
+z-ardern/MiniFold_MLX_weights
+├── esm2/           # finetuned MLX ESM2 3B (safetensors, ~11 GB)
+├── minifold_48L/   # 48-layer MiniFold MLX weights (~285 MB)
+└── minifold_12L/   # 12-layer MiniFold MLX weights (~259 MB)
 ```
+
+```python
+from huggingface_hub import snapshot_download
+
+weights = snapshot_download("z-ardern/MiniFold_MLX_weights")
+esm_path      = f"{weights}/esm2"
+minifold_path = f"{weights}/minifold_48L"
+```
+
+## Quick Start
+
+```python
+from minifold_mlx import load_model, predict_sequence, predict_batch
+
+tokenizer, model = load_model(
+    mlx_esm_path      = "path/to/esm2",
+    mlx_minifold_path = "path/to/minifold_48L",
+)
+
+# Single sequence
+pdb_str = predict_sequence("my_protein", "MKVLILSAVLFAASSA...", model, tokenizer)
+
+# Batch
+results = predict_batch(
+    [("prot1", "MKVL..."), ("prot2", "MSYL...")],
+    model, tokenizer,
+)
+# results = {"prot1": "<PDB string>", "prot2": "<PDB string>"}
+```
+
+## Acknowledgements
+
+This package is a port of [MiniFold](https://github.com/jwohlwend/minifold) by Jonas Wohlwend et al., adapted for Apple Silicon using MLX. The original MiniFold code and weights are the foundation of this work.
+
+Development assistance provided by [Claude Code](https://claude.ai/code) (Anthropic). The MLX port, SGMM Metal kernel, int8 quantization pipeline, and benchmarking infrastructure were developed in collaboration with Claude Sonnet 4.6.
+
+## License
+
+MIT License, following MiniFold. See [LICENSE](LICENSE) for details.

@@ -3,30 +3,52 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "minifold"
+name = "minifold-mlx"
 version = "0.1.0"
-requires-python = ">=3.9"
-description = "MiniFold"
-readme = "README.md"
+description = "MLX MiniFold — Apple Silicon protein structure prediction"
+requires-python = ">=3.10"
 dependencies = [
+    # All pure-MLX/numpy — no PyTorch required for inference.
+    # ESM2 is vendored in minifold_mlx/esm2/.
+    "mlx >= 0.16.0",
     "numpy",
-    "scipy",
-    "pytorch_lightning",
-    "torch>=2.3.0",
-    "fair-esm",
-    "biopython==1.81",
-    "edit_distance",
-    "pandas",
-    "modelcif",
-    "dm-tree",
-    "psutil",
-    "click",
-    "ml_collections",
-    "einops",
+    "tqdm",
+    "modelcif",   # PDB output (protein.py)
+    "dm-tree",    # residue_constants dependency
 ]
 
-[tool.setuptools]
-packages = ["minifold"]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
 
 [tool.setuptools.package-data]
-minifold = ["utils/stereo_chemical_props.txt"]
+minifold_mlx = [
+    "utils/stereo_chemical_props.txt",
+    "esm2/*.py",
+]
+
+# ── Usage notes ───────────────────────────────────────────────────────────────
+#
+# Install (local development):
+#   uv pip install -e .
+#
+# Install from GitHub (once public):
+#   uv pip install git+https://github.com/<you>/MiniFold-MLX
+#
+# Quick start:
+#   from minifold_mlx import load_model, predict_batch, get_of_config
+#
+#   tokenizer, model = load_model(
+#       mlx_esm_path      = "path/to/checkpoints/mlx-esm2_t36_3B_UR50D_finetuned",
+#       mlx_minifold_path = "path/to/minifold_mlx_48L",
+#   )
+#   results = predict_batch(
+#       [("prot1", "MKVL..."), ("prot2", "MSYL...")],
+#       model, tokenizer,
+#   )
+#   # results = {"prot1": "<PDB string>", "prot2": "<PDB string>"}
