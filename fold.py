@@ -30,11 +30,11 @@ def _get_weights(model_size: str) -> tuple[str, str]:
 
     print(f"Checking weights ({HF_REPO}) …")
     weights_dir = Path(snapshot_download(HF_REPO))
-    esm_path      = weights_dir / "esm2"
+    esm_path      = weights_dir / "ESM2_MiniFold"
     minifold_path = weights_dir / f"minifold_{model_size}"
 
     if not esm_path.exists():
-        print(f"ERROR: esm2/ not found in {weights_dir}")
+        print(f"ERROR: ESM2_MiniFold/ not found in {weights_dir}")
         sys.exit(1)
     if not minifold_path.exists():
         print(f"ERROR: minifold_{model_size}/ not found in {weights_dir}")

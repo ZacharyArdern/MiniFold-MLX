@@ -26,7 +26,7 @@ Pre-converted MLX weights (finetuned ESM2 + MiniFold 48L/12L) are available on H
 
 ```
 z-ardern/MiniFold_MLX_weights
-├── esm2/           # finetuned MLX ESM2 3B (safetensors, ~11 GB)
+├── ESM2_MiniFold/  # finetuned MLX ESM2 3B (safetensors, ~11 GB)
 ├── minifold_48L/   # 48-layer MiniFold MLX weights (~285 MB)
 └── minifold_12L/   # 12-layer MiniFold MLX weights (~259 MB)
 ```
@@ -35,7 +35,7 @@ z-ardern/MiniFold_MLX_weights
 from huggingface_hub import snapshot_download
 
 weights = snapshot_download("z-ardern/MiniFold_MLX_weights")
-esm_path      = f"{weights}/esm2"
+esm_path      = f"{weights}/ESM2_MiniFold"
 minifold_path = f"{weights}/minifold_48L"
 ```
 
