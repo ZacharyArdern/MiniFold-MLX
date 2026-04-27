@@ -28,6 +28,8 @@ def _get_weights(model_size: str) -> tuple[str, str]:
         print("ERROR: huggingface_hub is required. Install with: pip install huggingface_hub")
         sys.exit(1)
 
+    import os
+    os.environ.setdefault("HF_HUB_ENABLE_HF_XET", "1")
     print(f"Checking weights ({HF_REPO}) …")
     weights_dir = Path(snapshot_download(HF_REPO))
     esm_path      = weights_dir / "ESM2_MiniFold"
