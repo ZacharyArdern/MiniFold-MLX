@@ -20,26 +20,37 @@ pip install git+https://github.com/ZacharyArdern/MiniFold-MLX
 
 Requires macOS with Apple Silicon (M1 or later) and MLX >= 0.16.0.
 
+## Quick Start
+
+```bash
+python fold.py example.fasta --out_dir ./structures
+```
+
+Weights (~3.8 GB) are downloaded automatically on first run. PDB files are saved to `./structures/`.
+
 ## Weights
 
 Pre-converted MLX weights (finetuned ESM2 + MiniFold 48L/12L) are available on HuggingFace:
 
 ```
 z-ardern/MiniFold_MLX_weights
-├── ESM2_MiniFold/  # finetuned MLX ESM2 3B (safetensors, ~11 GB)
-├── minifold_48L/   # 48-layer MiniFold MLX weights (~285 MB)
-└── minifold_12L/   # 12-layer MiniFold MLX weights (~259 MB)
+├── ESM2_MiniFold_int8/  # finetuned MLX ESM2 3B, int8 quantized (~3.3 GB) ← downloaded by default
+├── ESM2_MiniFold/       # finetuned MLX ESM2 3B, full precision (~11 GB)
+├── minifold_48L/        # 48-layer MiniFold MLX weights (~285 MB)
+└── minifold_12L/        # 12-layer MiniFold MLX weights (~259 MB)
 ```
+
+`fold.py` downloads only `ESM2_MiniFold_int8` by default. Pass `--non-quantized-ESM2` to use the full-precision weights instead.
 
 ```python
 from huggingface_hub import snapshot_download
 
 weights = snapshot_download("z-ardern/MiniFold_MLX_weights")
-esm_path      = f"{weights}/ESM2_MiniFold"
+esm_path      = f"{weights}/ESM2_MiniFold_int8"
 minifold_path = f"{weights}/minifold_48L"
 ```
 
-## Quick Start
+## Use in Python
 
 ```python
 from minifold_mlx import load_model, predict_sequence, predict_batch
