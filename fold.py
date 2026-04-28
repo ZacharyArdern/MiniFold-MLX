@@ -31,9 +31,10 @@ def _get_weights(model_size: str, use_quantized_esm: bool = True) -> tuple[str, 
         print("ERROR: huggingface_hub is required. Install with: pip install huggingface_hub")
         sys.exit(1)
 
+    esm_folder = "ESM2_MiniFold_int8" if use_quantized_esm else "ESM2_MiniFold"
+    skip_folder = "ESM2_MiniFold" if use_quantized_esm else "ESM2_MiniFold_int8"
     print(f"Checking weights ({HF_REPO}) …")
-    weights_dir   = Path(snapshot_download(HF_REPO))
-    esm_folder    = "ESM2_MiniFold_int8" if use_quantized_esm else "ESM2_MiniFold"
+    weights_dir = Path(snapshot_download(HF_REPO, ignore_patterns=[f"{skip_folder}/*"]))
     esm_path      = weights_dir / esm_folder
     minifold_path = weights_dir / f"minifold_{model_size}"
 
