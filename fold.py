@@ -23,7 +23,7 @@ from pathlib import Path
 HF_REPO = "z-ardern/MiniFold_MLX_weights"
 
 
-def _get_weights(model_size: str) -> tuple[str, str]:
+def _get_weights(model_size: str, use_quantized_esm: bool = True) -> tuple[str, str]:
     """Download weights from HuggingFace if not cached; return (esm_path, minifold_path)."""
     try:
         from huggingface_hub import snapshot_download
@@ -32,12 +32,13 @@ def _get_weights(model_size: str) -> tuple[str, str]:
         sys.exit(1)
 
     print(f"Checking weights ({HF_REPO}) …")
-    weights_dir = Path(snapshot_download(HF_REPO))
-    esm_path      = weights_dir / "ESM2_MiniFold"
+    weights_dir   = Path(snapshot_download(HF_REPO))
+    esm_folder    = "ESM2_MiniFold_int8" if use_quantized_esm else "ESM2_MiniFold"
+    esm_path      = weights_dir / esm_folder
     minifold_path = weights_dir / f"minifold_{model_size}"
 
     if not esm_path.exists():
-        print(f"ERROR: ESM2_MiniFold/ not found in {weights_dir}")
+        print(f"ERROR: {esm_folder}/ not found in {weights_dir}")
         sys.exit(1)
     if not minifold_path.exists():
         print(f"ERROR: minifold_{model_size}/ not found in {weights_dir}")
@@ -77,9 +78,12 @@ def main():
                         help="Skip sequences longer than this (default: 800, 0=no limit)")
     parser.add_argument("--no_compile", action="store_true",
                         help="Disable mx.compile on MiniFormer")
-    parser.add_argument("--no_int8", action="store_true",
-                        help="Disable int8 ESM2 quantization (uses more memory)")
+    parser.add_argument("--non-quantized-ESM2", dest="non_quantized_esm2",
+                        action="store_true",
+                        help="Use full-precision ESM2 weights instead of int8 (~11 GB vs ~5.5 GB)")
     args = parser.parse_args()
+
+    use_quantized_esm = not args.non_quantized_esm2
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -90,7 +94,7 @@ def main():
         sys.exit(1)
     print(f"Found {len(sequences)} sequence(s) in {args.fasta}")
 
-    esm_path, minifold_path = _get_weights(args.model_size)
+    esm_path, minifold_path = _get_weights(args.model_size, use_quantized_esm)
 
     import mlx.core as mx
     import mlx.nn as nn_mlx
@@ -102,11 +106,8 @@ def main():
     model.enable_sgmm_gate()
     model.fold._timing = False
 
-    if not args.no_int8:
-        esm_model = object.__getattribute__(model, "_esm_model")
-        nn_mlx.quantize(esm_model, bits=8, group_size=32)
-        mx.eval(esm_model.parameters())
-        print("  ESM2 quantized to int8")
+    if use_quantized_esm:
+        print("  ESM2: pre-quantized int8 weights")
 
     if not args.no_compile:
         model.enable_compile_miniformer()
