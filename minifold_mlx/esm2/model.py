@@ -326,6 +326,19 @@ class ESM2(nn.Module):
         # Load safetensors as nested dict and update model params
         weights_path = model_dir / "model.safetensors"
         flat_weights = mx.load(str(weights_path))
+
+        # Detect quantized checkpoint by presence of 'scales' keys
+        is_quantized = any("scales" in k for k in flat_weights)
+        if is_quantized:
+            import mlx.nn as nn_mlx
+            # Infer group_size from scales shape vs weight shape
+            sample_key = next(k for k in flat_weights if "scales" in k)
+            base = sample_key.rsplit(".scales", 1)[0]
+            w_shape = flat_weights[f"{base}.weight"].shape
+            s_shape = flat_weights[f"{base}.scales"].shape
+            group_size = w_shape[-1] * 4 // s_shape[-1]  # uint32 packs 4 values
+            nn_mlx.quantize(model, bits=8, group_size=group_size)
+
         nested_weights: Dict[str, dict] = {}
         for key, value in flat_weights.items():
             parts = key.split(".")

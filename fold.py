@@ -107,7 +107,7 @@ def main():
     model.fold._timing = False
 
     if use_quantized_esm:
-        print("  ESM2: pre-quantized int8 weights")
+        print("  ESM2: loaded pre-quantized int8 weights")
 
     if not args.no_compile:
         model.enable_compile_miniformer()
