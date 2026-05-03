@@ -18,7 +18,7 @@ An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using
 pip install git+https://github.com/ZacharyArdern/MiniFold-MLX
 ```
 
-Requires macOS with Apple Silicon (M1 or later) and MLX >= 0.16.0.
+**Requires macOS with Apple Silicon (M1 or later).** For Linux/Windows, use the original [MiniFold](https://github.com/jwohlwend/minifold). MLX >= 0.16.0 is installed automatically as a dependency.
 
 ## Quick Start
 

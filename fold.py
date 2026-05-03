@@ -16,6 +16,12 @@ import os
 import sys
 
 os.environ.setdefault("HF_HUB_ENABLE_HF_XET", "1")
+
+import platform
+if platform.system() != "Darwin":
+    print("ERROR: MiniFold-MLX requires macOS with Apple Silicon. "
+          "For Linux/Windows, use the original MiniFold: https://github.com/jwohlwend/minifold")
+    sys.exit(1)
 import time
 from pathlib import Path
 
