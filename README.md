@@ -73,9 +73,11 @@ results = predict_batch(
 
 ## Acknowledgements
 
-This package is a port of [MiniFold](https://github.com/jwohlwend/minifold) by Jonas Wohlwend et al., adapted for Apple Silicon using MLX. The original MiniFold code and weights are the foundation of this work.
+This package is a port of [MiniFold](https://github.com/jwohlwend/minifold) by Jeremy Wohlwend et al., adapted for Apple Silicon using MLX. The original MiniFold code and weights are the foundation of this work.
 
-Development assistance provided by [Claude Code](https://claude.ai/code) (Anthropic). The MLX port, SGMM Metal kernel, int8 quantization pipeline, and benchmarking infrastructure were developed in collaboration with Claude Sonnet 4.6.
+The use of MLX for ESM-2 is based on MLX-ESM-2 by Vincent Amato [https://github.com/vincentamato/mlx-esm-2] (https://github.com/vincentamato/mlx-esm-2), but re-implemented for the fine-tuned ESM-2 model used by MiniFold, and with int8 quantization.
+
+Development assistance provided by [Claude Code](https://claude.ai/code) (Anthropic). The MLX port, SGMM Metal kernel, use of RMSNorm, and int8 quantization pipeline were developed, through iterations and with careful benchmarking, with the aid of Claude Sonnet 4.6.
 
 ## License
 
