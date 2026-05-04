@@ -19,6 +19,9 @@ dependencies = [
     "biopython",        # protein.py
 ]
 
+[project.scripts]
+minifold = "minifold_mlx.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
