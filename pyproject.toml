@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "minifold-mlx"
 version = "0.1.0"
 description = "MLX MiniFold — Apple Silicon protein structure prediction"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     # All pure-MLX/numpy — no PyTorch required for inference.
