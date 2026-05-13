@@ -15,12 +15,18 @@ An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using
 ## Installation
 
 ```bash
-pip install git+https://github.com/ZacharyArdern/MiniFold-MLX
+pip install minifold-mlx
 ```
 
 **Requires macOS with Apple Silicon (M1 or later).** For Linux/Windows, use the original [MiniFold](https://github.com/jwohlwend/minifold). MLX >= 0.16.0 is installed automatically as a dependency.
 
 ## Quick Start
+
+```bash
+minifold example.fasta --out_dir ./structures
+```
+
+OR
 
 ```bash
 python fold.py example.fasta --out_dir ./structures
