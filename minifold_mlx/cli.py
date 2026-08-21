@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 
 
-HF_REPO = "z-ardern/MiniFold_MLX_weights"
+HF_REPO = "z-ardern/MiniFoldX_weights"
 
 EXAMPLE_ID  = "7L8N_A"
 EXAMPLE_SEQ = ("QQLSDDEKLVAAFVKAVAYMSPRKIGALVSIEETQTLREYIATGIPLDADISGELLINIFIPNTPLHDGAVIVEGNKIAVSC"

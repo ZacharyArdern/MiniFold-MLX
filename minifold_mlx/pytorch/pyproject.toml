@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minifold-pytorch"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "click",
+    "torch",
+    "numpy",
+    "biopython",
+    "tqdm",
+    "fair-esm",
+    "ml_collections",
+    "dm-tree",
+    "modelcif",
+    "einops",
+    "edit_distance",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

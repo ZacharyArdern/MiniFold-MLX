@@ -3,9 +3,9 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "minifold-mlx"
-version = "0.1.0"
-description = "MLX MiniFold — Apple Silicon protein structure prediction"
+name = "minifoldx"
+version = "0.2.0"
+description = "MiniFoldX — protein structure prediction on Apple Silicon (MLX) or Google Colab (CUDA)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -20,14 +20,17 @@ dependencies = [
     "biopython",        # protein.py
 ]
 
-[project.scripts]
-minifold = "minifold_mlx.cli:main"
-
 [project.optional-dependencies]
+colab = [
+    "click",            # minifold-colab CLI
+]
 dev = [
     "pytest",
     "ruff",
 ]
+
+[project.scripts]
+minifoldx = "minifold_mlx._dispatch:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -44,7 +47,7 @@ minifold_mlx = [
 #   uv pip install -e .
 #
 # Install from GitHub (once public):
-#   uv pip install git+https://github.com/<you>/MiniFold-MLX
+#   uv pip install git+https://github.com/ZacharyArdern/MiniFoldX
 #
 # Quick start:
 #   from minifold_mlx import load_model, predict_batch, get_of_config

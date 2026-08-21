@@ -23,7 +23,7 @@ from pathlib import Path
 
 os.environ.setdefault("HF_HUB_ENABLE_HF_XET", "1")
 
-HF_REPO = "z-ardern/MiniFold_MLX_weights"
+HF_REPO = "z-ardern/MiniFoldX_weights"
 
 
 def main():
