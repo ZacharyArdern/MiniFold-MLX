@@ -258,16 +258,14 @@ def predict(
     out_dir = out_dir / f"minifold_results_{fasta.stem}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Download necessary data and model
-    download(cache, model_size)
+    # Download necessary data and model (skip if checkpoint explicitly provided)
+    if checkpoint is None:
+        download(cache, model_size)
+        checkpoint = cache / f"minifold_{model_size}.ckpt"
 
     # Detect device
     device = get_device()
     print(f"Using device: {device}")
-
-    # Load model
-    if checkpoint is None:
-        checkpoint = cache / f"minifold_{model_size}.ckpt"
 
     # Set hub cache
     torch.hub.set_dir(cache)
