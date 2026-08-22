@@ -3,7 +3,6 @@ import os
 from typing import Optional, Any
 
 import ml_collections as mlc
-import pytorch_lightning as pl
 import torch
 
 from minifold.data import data_pipeline, feature_pipeline, mmcif_parsing
