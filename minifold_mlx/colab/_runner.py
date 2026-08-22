@@ -165,11 +165,14 @@ os.environ["TORCH_HOME"] = WEIGHTS
 def run(*cmd):
     print("+", " ".join(str(c) for c in cmd), flush=True)
     import sys as _sys
-    r = subprocess.run(list(cmd), stderr=subprocess.PIPE)
-    if r.returncode != 0:
-        if r.stderr:
-            print(r.stderr.decode(errors="replace"), file=_sys.stderr, flush=True)
-        raise subprocess.CalledProcessError(r.returncode, list(cmd))
+    proc = subprocess.Popen(list(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stderr_lines = []
+    for line in proc.stdout:
+        decoded = line.decode(errors="replace")
+        print(decoded, end="", flush=True)
+    proc.wait()
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, list(cmd))
 
 def rclone_copy(src, dst, *extra):
     # Exit code 3 = source directory not found (normal on first run); treat as no-op.
