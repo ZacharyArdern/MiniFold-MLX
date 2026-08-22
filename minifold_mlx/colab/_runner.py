@@ -202,7 +202,8 @@ step("Pulling weights from Drive")
 rclone_copy(WEIGHTS_REMOTE, WEIGHTS)
 
 step("Installing uv")
-new_downloads = False
+new_model_weights = False  # ESM2 + MiniFold checkpoint (large)
+new_vm_cache = False       # uv binary, repo tar, pip wheels (small)
 import shutil
 if os.path.exists(UV_BIN_CACHE):
     print("Using cached uv binary", flush=True)
@@ -213,7 +214,7 @@ else:
     uv_path = shutil.which("uv")
     if uv_path:
         shutil.copy(uv_path, UV_BIN_CACHE)
-    new_downloads = True
+    new_vm_cache = True
 
 step("Setting up MiniFoldX code")
 os.environ["UV_CACHE_DIR"] = UV_PKG_CACHE
@@ -225,7 +226,7 @@ if os.path.exists(MINIFOLD_TAR):
 else:
     run("git", "clone", "--depth=1", "https://github.com/ZacharyArdern/MiniFoldX.git", MINIFOLDX_DIR)
     run("tar", "-czf", MINIFOLD_TAR, "-C", "/content", "MiniFoldX")
-    new_downloads = True
+    new_vm_cache = True
 
 step("Installing Python dependencies")
 run("uv", "pip", "install", "--system", "-e", PYTORCH_DIR,
@@ -252,7 +253,7 @@ if not os.path.exists(ESM2_PT_PATH):
     state = load_file(st_tmp)
     torch.save({{'model': state}}, ESM2_PT_PATH)
     print(f"ESM2 cached to {{ESM2_PT_PATH}}", flush=True)
-    new_downloads = True
+    new_model_weights = True
 else:
     print("Using cached ESM2 weights", flush=True)
 
@@ -267,7 +268,7 @@ if not os.path.exists(ckpt_dest):
         local_dir=WEIGHTS,
         local_dir_use_symlinks=False,
     )
-    new_downloads = True
+    new_model_weights = True
 else:
     print(f"Using cached {{ckpt_name}}", flush=True)
 
@@ -275,12 +276,17 @@ else:
 step("Running structure prediction")
 {predict_invocation}
 
-step("Saving weights to Drive")
-if new_downloads:
-    print("Pushing new weights to Drive cache ...", flush=True)
-    rclone_copy(WEIGHTS, WEIGHTS_REMOTE)
+step("Saving to Drive")
+if new_model_weights:
+    print("Pushing new model weights to Drive ...", flush=True)
+    rclone_copy(WEIGHTS, WEIGHTS_REMOTE, "--exclude", "vm_cache/**")
 else:
-    print("Weights unchanged — skipping Drive push.", flush=True)
+    print("Model weights unchanged — skipping.", flush=True)
+if new_vm_cache:
+    print("Pushing updated VM cache to Drive ...", flush=True)
+    rclone_copy(VM_CACHE, f"{{WEIGHTS_REMOTE}}/vm_cache")
+else:
+    print("VM cache unchanged — skipping.", flush=True)
 
 # Push results to Drive
 job_remote = f"{{JOBS_REMOTE}}/{{JOB_ID}}/outputs"
