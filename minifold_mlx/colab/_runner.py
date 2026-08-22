@@ -157,7 +157,6 @@ UV_BIN_CACHE  = os.path.join(VM_CACHE, "uv")
 MINIFOLD_TAR  = os.path.join(VM_CACHE, "minifold.tar.gz")
 UV_PKG_CACHE  = os.path.join(VM_CACHE, "uv_packages")
 ESM2_HF_REPO  = "z-ardern/MiniFoldX_weights"
-ESM2_HF_FILE  = "ESM2_fp16/esm2_t36_3B_UR50D_fp16.safetensors"
 ESM2_HUB_DIR  = os.path.join(WEIGHTS, "hub", "checkpoints")
 ESM2_PT_PATH  = os.path.join(ESM2_HUB_DIR, "esm2_t36_3B_UR50D.pt")
 CKPT_PATH     = os.path.join(WEIGHTS, f"minifold_{{MODEL_SIZE}}.safetensors")
@@ -180,7 +179,13 @@ def run(*cmd):
 def rclone_copy(src, dst, *extra):
     # Exit code 3 = source directory not found (normal on first run); treat as no-op.
     print(f"+ rclone copy {{src}} {{dst}}", flush=True)
-    r = subprocess.run(["rclone", "copy", src, dst, "--progress", *extra])
+    r = subprocess.run([
+        "rclone", "copy", src, dst, "--progress",
+        "--drive-chunk-size", "256M",
+        "--transfers", "8",
+        "--buffer-size", "256M",
+        *extra,
+    ])
     if r.returncode not in (0, 3):
         raise RuntimeError(f"rclone copy failed with exit code {{r.returncode}}")
 
@@ -248,29 +253,9 @@ run("uv", "pip", "install", "--system", "-e", PYTORCH_DIR,
 {int8_install}
 {triton_install}
 
-step("Preparing ESM2 weights")
+step("Preparing MiniFold checkpoint")
 os.environ.setdefault("HF_HUB_ENABLE_HF_XET", "1")
 from huggingface_hub import hf_hub_download
-if not os.path.exists(ESM2_PT_PATH):
-    print("Downloading ESM2 fp16 safetensors from HF ...", flush=True)
-    import tempfile
-    st_tmp = hf_hub_download(
-        repo_id=ESM2_HF_REPO,
-        filename=ESM2_HF_FILE,
-        local_dir=tempfile.mkdtemp(),
-        local_dir_use_symlinks=False,
-    )
-    print("Converting safetensors → torch hub cache ...", flush=True)
-    import torch
-    from safetensors.torch import load_file
-    state = load_file(st_tmp)
-    torch.save({{'model': state}}, ESM2_PT_PATH)
-    print(f"ESM2 cached to {{ESM2_PT_PATH}}", flush=True)
-    new_model_weights = True
-else:
-    print("Using cached ESM2 weights", flush=True)
-
-step("Preparing MiniFold checkpoint")
 ckpt_name = f"minifold_{{MODEL_SIZE}}.safetensors"
 ckpt_dest = os.path.join(WEIGHTS, ckpt_name)
 if not os.path.exists(ckpt_dest):
@@ -282,26 +267,34 @@ if not os.path.exists(ckpt_dest):
         local_dir_use_symlinks=False,
     )
     new_model_weights = True
+    step("Saving MiniFold checkpoint to Drive")
+    rclone_copy(WEIGHTS, WEIGHTS_REMOTE, "--exclude", "vm_cache/**", "--exclude", "hub/**")
 else:
     print(f"Using cached {{ckpt_name}}", flush=True)
 
-step("Saving weights to Drive")
-if new_model_weights:
-    print("Pushing new model weights to Drive ...", flush=True)
-    rclone_copy(WEIGHTS, WEIGHTS_REMOTE, "--exclude", "vm_cache/**")
-else:
-    print("Model weights unchanged — skipping.", flush=True)
 if new_vm_cache:
-    print("Pushing updated VM cache to Drive ...", flush=True)
+    step("Saving VM cache to Drive")
     rclone_copy(VM_CACHE, f"{{WEIGHTS_REMOTE}}/vm_cache")
 else:
-    print("VM cache unchanged — skipping.", flush=True)
+    print("VM cache unchanged — skipping Drive push.", flush=True)
+
+# ESM2 is downloaded by torch hub (TORCH_HOME=WEIGHTS) on first run,
+# then pushed to Drive after predict so subsequent runs skip the download.
+esm2_cached_before = os.path.exists(ESM2_PT_PATH)
+if esm2_cached_before:
+    print(f"ESM2 weights cached at {{ESM2_PT_PATH}}", flush=True)
+else:
+    print("ESM2 not cached — will download from fbaipublicfiles during model load.", flush=True)
 
 {int8_wrapper}
 step("Running structure prediction")
 {predict_invocation}
 
 OUT_DEST = "{out_dest}"
+
+if not esm2_cached_before and os.path.exists(ESM2_PT_PATH):
+    step("Caching ESM2 to Drive")
+    rclone_copy(ESM2_HUB_DIR, f"{{WEIGHTS_REMOTE}}/hub/checkpoints")
 
 step("Saving results")
 if OUT_DEST in ("both", "drive"):

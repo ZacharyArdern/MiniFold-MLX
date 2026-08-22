@@ -9,7 +9,6 @@ import torch.nn.functional as F
 import numpy as np
 from Bio import SeqIO
 from esm.pretrained import load_model_and_alphabet
-from tqdm import tqdm
 
 from minifold.model.model import MiniFoldModel
 from minifold.utils.residue_constants import restype_order_with_x
@@ -291,8 +290,14 @@ def predict(
     batches = create_batches(fasta, token_per_batch)
 
     # Predict
-    print("Launching predictions...")
-    for batch in tqdm(batches):
+    n_batches = len(batches)
+    n_seqs = sum(len(b) for b in batches)
+    print(f"Launching predictions: {n_seqs} sequence(s) in {n_batches} batch(es)...")
+    completed = 0
+    for batch_idx, batch in enumerate(batches, 1):
+        max_seq_len = max(len(str(t.seq)) for t in batch)
+        print(f"\n[{batch_idx}/{n_batches}] {len(batch)} seq(s), max len {max_seq_len} aa "
+              f"({completed}/{n_seqs} done)", flush=True)
         # Prepare batch
         feats = [prepare_input(str(t.seq), config, alphabet) for t in batch]
 
@@ -361,6 +366,9 @@ def predict(
                 pdb_string = output_to_pdb(str(t.seq), out_pos_i, out_mask_i, plddt_i)
                 with open(path_out, "w") as f:
                     f.write(pdb_string)
+
+            completed += len(batch)
+            print(f"  → saved {len(batch)} structure(s) ({completed}/{n_seqs} total)", flush=True)
 
         # Skip if prediction failed
         except Exception as e:
