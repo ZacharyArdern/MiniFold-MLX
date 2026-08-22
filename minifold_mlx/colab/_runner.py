@@ -284,11 +284,7 @@ if not os.path.exists(ckpt_dest):
 else:
     print(f"Using cached {{ckpt_name}}", flush=True)
 
-{int8_wrapper}
-step("Running structure prediction")
-{predict_invocation}
-
-step("Saving to Drive")
+step("Saving weights to Drive")
 if new_model_weights:
     print("Pushing new model weights to Drive ...", flush=True)
     rclone_copy(WEIGHTS, WEIGHTS_REMOTE, "--exclude", "vm_cache/**")
@@ -299,6 +295,10 @@ if new_vm_cache:
     rclone_copy(VM_CACHE, f"{{WEIGHTS_REMOTE}}/vm_cache")
 else:
     print("VM cache unchanged — skipping.", flush=True)
+
+{int8_wrapper}
+step("Running structure prediction")
+{predict_invocation}
 
 OUT_DEST = "{out_dest}"
 

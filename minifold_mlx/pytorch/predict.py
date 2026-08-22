@@ -108,6 +108,8 @@ def create_model(checkpoint, device, compile=False, kernels=False):
     )
 
     _, alphabet = load_model_and_alphabet(hparams["esm_model_name"])
+    # Keep ESM2 in fp16 to halve its memory footprint (~7GB fp32 → ~3.5GB fp16)
+    model.esm = model.esm.half()
 
     state_dict = {k: v for k, v in state_dict.items() if "boundaries" not in k}
     state_dict = {k: v for k, v in state_dict.items() if "mid_points" not in k}
