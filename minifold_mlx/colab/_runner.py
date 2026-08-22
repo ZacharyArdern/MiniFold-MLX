@@ -209,7 +209,7 @@ def step(msg):
     step_elapsed = now - _t_step
     total_elapsed = now - _t0
     if total_elapsed > 1:
-        print(f"  [{_fmt(step_elapsed)} step | {_fmt(total_elapsed)} total]", flush=True)
+        print(f"  [{{_fmt(step_elapsed)}} step | {{_fmt(total_elapsed)}} total]", flush=True)
     print(f"\\n=== {{msg}} ===", flush=True)
     _t_step = now
 
@@ -319,7 +319,7 @@ if OUT_DEST in ("both", "drive"):
 else:
     print("Skipping Drive result push (--out pwd).", flush=True)
 
-print(f"\\n=== Done [{_fmt(_time.time() - _t0)} total] ===", flush=True)
+print(f"\\n=== Done [{{_fmt(_time.time() - _t0)}} total] ===", flush=True)
 """
 
 
