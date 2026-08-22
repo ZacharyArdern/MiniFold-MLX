@@ -60,9 +60,11 @@ def _get_weights(model_size: str, use_quantized_esm: bool = True) -> tuple[str, 
 
 
 def _read_fasta(path: str) -> list[tuple[str, str]]:
+    import gzip
     sequences = []
     current_id, current_seq = None, []
-    with open(path) as f:
+    opener = gzip.open if path.endswith(".gz") else open
+    with opener(path, "rt") as f:
         for line in f:
             line = line.strip()
             if line.startswith(">"):

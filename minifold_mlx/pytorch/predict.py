@@ -133,8 +133,11 @@ def create_model(checkpoint, device, compile=False, kernels=False):
 
 
 def create_batches(fasta, token_per_batch):
-    # Load sequences and sort by length
-    seqs = list(SeqIO.parse(fasta, "fasta"))
+    import gzip
+    opener = gzip.open if str(fasta).endswith(".gz") else open
+    with opener(fasta, "rt") as fh:
+        seqs = list(SeqIO.parse(fh, "fasta"))
+    seqs = sorted(seqs, key=lambda x: len(str(x.seq)))
     seqs = sorted(seqs, key=lambda x: len(str(x.seq)))
 
     # Create batches
