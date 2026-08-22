@@ -195,8 +195,23 @@ os.makedirs(ESM2_HUB_DIR, exist_ok=True)
 os.makedirs(VM_CACHE, exist_ok=True)
 os.makedirs(UV_PKG_CACHE, exist_ok=True)
 
+import time as _time
+_t0 = _time.time()
+_t_step = _time.time()
+
+def _fmt(secs):
+    m, s = divmod(int(secs), 60)
+    return f"{{m:02d}}:{{s:02d}}"
+
 def step(msg):
+    global _t_step
+    now = _time.time()
+    step_elapsed = now - _t_step
+    total_elapsed = now - _t0
+    if total_elapsed > 1:
+        print(f"  [{_fmt(step_elapsed)} step | {_fmt(total_elapsed)} total]", flush=True)
     print(f"\\n=== {{msg}} ===", flush=True)
+    _t_step = now
 
 # rclone must be downloaded before Drive is accessible — cannot be cached on Drive
 step("Installing rclone")
@@ -303,6 +318,8 @@ if OUT_DEST in ("both", "drive"):
     print(f"Results saved to Drive: {{job_remote}}", flush=True)
 else:
     print("Skipping Drive result push (--out pwd).", flush=True)
+
+print(f"\\n=== Done [{_fmt(_time.time() - _t0)} total] ===", flush=True)
 """
 
 
