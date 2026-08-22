@@ -106,10 +106,12 @@ def create_model(checkpoint, device, compile=False, kernels=False):
         use_structure_module=True,
         kernels=kernels,
     )
-
-    _, alphabet = load_model_and_alphabet(hparams["esm_model_name"])
-    # Keep ESM2 in fp16 to halve its memory footprint (~7GB fp32 → ~3.5GB fp16)
+    # Convert ESM2 to fp16 before state_dict load to avoid fp32 peak (~7GB → ~3.5GB)
     model.esm = model.esm.half()
+
+    # Get alphabet without loading ESM2 weights a second time
+    from esm.data import Alphabet
+    alphabet = Alphabet.from_architecture("ESM-1b")
 
     state_dict = {k: v for k, v in state_dict.items() if "boundaries" not in k}
     state_dict = {k: v for k, v in state_dict.items() if "mid_points" not in k}

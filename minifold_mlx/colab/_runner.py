@@ -66,7 +66,8 @@ def make_job_script(
 ) -> str:
     """Return a Python script that runs on the Colab VM."""
     import subprocess as _sp
-    _commit = _sp.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    _repo = Path(__file__).resolve().parent.parent.parent
+    _commit = _sp.run(["git", "-C", str(_repo), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 
     kernels_flag = ', "--kernels"' if triton_kernels else ''
     predict_script = '"/content/MiniFoldX/minifold_mlx/pytorch/predict.py"'
