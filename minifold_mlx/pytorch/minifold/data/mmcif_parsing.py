@@ -24,7 +24,12 @@ import os
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from Bio import PDB
-from Bio.Data import SCOPData
+try:
+    from Bio.Data import SCOPData
+except ImportError:
+    from Bio.Data import IUPACData as _iupac
+    class SCOPData:
+        protein_letters_3to1 = _iupac.protein_letters_3to1
 import numpy as np
 
 import minifold.utils.residue_constants as residue_constants
