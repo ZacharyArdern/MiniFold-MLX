@@ -62,6 +62,7 @@ def make_job_script(
     num_recycling: int,
     int8_esm2: bool,
     triton_kernels: bool = False,
+    out_dest: str = "both",
 ) -> str:
     """Return a Python script that runs on the Colab VM."""
 
@@ -288,11 +289,30 @@ if new_vm_cache:
 else:
     print("VM cache unchanged — skipping.", flush=True)
 
-# Push results to Drive
-job_remote = f"{{JOBS_REMOTE}}/{{JOB_ID}}/outputs"
-rclone_copy(OUTPUTS, job_remote)
-print(f"Results saved to Drive: {{job_remote}}", flush=True)
+OUT_DEST = "{out_dest}"
+
+step("Saving results")
+if OUT_DEST in ("both", "drive"):
+    job_remote = f"{{JOBS_REMOTE}}/{{JOB_ID}}/outputs"
+    rclone_copy(OUTPUTS, job_remote)
+    print(f"Results saved to Drive: {{job_remote}}", flush=True)
+else:
+    print("Skipping Drive result push (--out pwd).", flush=True)
 """
+
+
+def _download_from_vm(session: str, remote_dir: str, local_dir: Path) -> None:
+    """Tar outputs on VM, download the archive, extract locally."""
+    import tarfile
+    remote_tar = "/tmp/minifold_outputs.tar.gz"
+    colab("exec", "-s", session, "--timeout", "60", "-f", "/dev/stdin",
+          input=f"import subprocess; subprocess.run(['tar','-czf','{remote_tar}','-C','{remote_dir}','.'], check=True)",
+          text=True)
+    local_tar = local_dir / "outputs.tar.gz"
+    colab("download", "-s", session, remote_tar, str(local_tar))
+    with tarfile.open(local_tar) as tf:
+        tf.extractall(local_dir)
+    local_tar.unlink()
 
 
 def run_prediction(
@@ -305,17 +325,24 @@ def run_prediction(
     timeout: int,
     int8_esm2: bool,
     triton_kernels: bool = False,
+    out_dest: str = "both",
 ) -> Path:
     """Upload FASTA, execute job script, download results. Returns local output dir."""
 
-    # Upload rclone credentials
-    click.echo("[2/5] Uploading rclone credentials ...")
-    colab("exec", "-s", session, "--timeout", "10",
-          "-f", "/dev/stdin",
-          input="import os; os.makedirs('/root/.config/rclone', exist_ok=True)",
-          text=True)
-    colab("upload", "-s", session,
-          str(RCLONE_CONF), "/root/.config/rclone/rclone.conf")
+    need_drive = out_dest in ("both", "drive")
+    need_local = out_dest in ("both", "pwd")
+
+    # Upload rclone credentials (only needed if pushing to Drive)
+    if need_drive:
+        click.echo("[2/5] Uploading rclone credentials ...")
+        colab("exec", "-s", session, "--timeout", "10",
+              "-f", "/dev/stdin",
+              input="import os; os.makedirs('/root/.config/rclone', exist_ok=True)",
+              text=True)
+        colab("upload", "-s", session,
+              str(RCLONE_CONF), "/root/.config/rclone/rclone.conf")
+    else:
+        click.echo("[2/5] Skipping rclone credentials (--out pwd) ...")
 
     # Upload FASTA
     click.echo(f"[3/5] Uploading {fasta_path.name} ...")
@@ -323,7 +350,10 @@ def run_prediction(
 
     # Generate and run job script
     click.echo(f"[4/5] Running prediction (timeout {timeout}s) ...")
-    job_script = make_job_script(job_id, model_size, token_per_batch, num_recycling, int8_esm2, triton_kernels)
+    job_script = make_job_script(
+        job_id, model_size, token_per_batch, num_recycling,
+        int8_esm2, triton_kernels, out_dest,
+    )
     with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
         f.write(job_script)
         job_script_path = f.name
@@ -331,13 +361,23 @@ def run_prediction(
     colab("exec", "-s", session, "-f", job_script_path, "--timeout", str(timeout))
 
     # Download results
-    click.echo("[5/5] Downloading results ...")
     out_dir = Path("./minifold_results") / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
-    result = subprocess.run(
-        ["rclone", "copy", f"{JOBS_REMOTE}/{job_id}/outputs", str(out_dir), "--progress"]
-    )
-    if result.returncode not in (0, 3):
-        raise click.ClickException(f"rclone download failed (exit {result.returncode})")
+
+    if need_local:
+        click.echo("[5/5] Downloading results ...")
+        if need_drive:
+            # Pull from Drive (already pushed by job script)
+            result = subprocess.run(
+                ["rclone", "copy", f"{JOBS_REMOTE}/{job_id}/outputs",
+                 str(out_dir), "--progress"]
+            )
+            if result.returncode not in (0, 3):
+                raise click.ClickException(f"rclone download failed (exit {result.returncode})")
+        else:
+            # Pull directly from VM before session is terminated
+            _download_from_vm(session, "/content/outputs", out_dir)
+    else:
+        click.echo("[5/5] Skipping local download (--out drive) ...")
 
     return out_dir

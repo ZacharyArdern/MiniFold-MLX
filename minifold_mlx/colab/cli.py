@@ -47,6 +47,9 @@ def main():
               help="Quantize ESM2 to int8 via bitsandbytes (~3× smaller, saves GPU memory).")
 @click.option("--triton-kernels", "triton_kernels", is_flag=True,
               help="Use Triton-fused MLP/gating kernels for faster inference on A100/H100.")
+@click.option("--out", "out_dest", default="both",
+              type=click.Choice(["both", "pwd", "drive"]), show_default=True,
+              help="Where to save results: both (Drive + local pwd), pwd (local only), drive (Drive only).")
 def run(
     fasta: str,
     gpu: str,
@@ -57,6 +60,7 @@ def run(
     keep: bool,
     int8_esm2: bool,
     triton_kernels: bool,
+    out_dest: str,
 ) -> None:
     """Run a MiniFold prediction on a fresh Colab GPU session."""
     check_deps()
@@ -70,6 +74,7 @@ def run(
     click.echo(f"GPU     : {gpu}  |  model: {model_size}  |  recycling: {num_recycling}")
     click.echo(f"ESM2    : {'int8 / bitsandbytes' if int8_esm2 else 'full precision'}")
     click.echo(f"Kernels : {'Triton (fused MLP/gating)' if triton_kernels else 'standard PyTorch'}")
+    click.echo(f"Output  : {out_dest}")
     click.echo("")
 
     click.echo(f"[1/5] Creating {gpu} session '{session}' ...")
@@ -80,6 +85,7 @@ def run(
         out_dir = run_prediction(
             fasta_path, job_id, session, model_size,
             token_per_batch, num_recycling, timeout, int8_esm2, triton_kernels,
+            out_dest,
         )
 
         pdbs = list(out_dir.rglob("*.pdb"))
