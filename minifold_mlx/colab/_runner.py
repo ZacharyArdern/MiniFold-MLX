@@ -156,7 +156,7 @@ ESM2_HF_REPO  = "z-ardern/MiniFoldX_weights"
 ESM2_HF_FILE  = "ESM2_fp16/esm2_t36_3B_UR50D_fp16.safetensors"
 ESM2_HUB_DIR  = os.path.join(WEIGHTS, "hub", "checkpoints")
 ESM2_PT_PATH  = os.path.join(ESM2_HUB_DIR, "esm2_t36_3B_UR50D.pt")
-CKPT_PATH     = os.path.join(WEIGHTS, f"minifold_{{MODEL_SIZE}}_final.ckpt")
+CKPT_PATH     = os.path.join(WEIGHTS, f"minifold_{{MODEL_SIZE}}.safetensors")
 
 # Point torch hub (and fair-esm) at our Drive-cached weights dir
 os.environ["TORCH_HOME"] = WEIGHTS
@@ -258,12 +258,12 @@ else:
     print("Using cached ESM2 weights", flush=True)
 
 step("Preparing MiniFold checkpoint")
-ckpt_name = f"minifold_{{MODEL_SIZE}}_final.ckpt"
+ckpt_name = f"minifold_{{MODEL_SIZE}}.safetensors"
 ckpt_dest = os.path.join(WEIGHTS, ckpt_name)
 if not os.path.exists(ckpt_dest):
     print(f"Downloading {{ckpt_name}} from HuggingFace ...", flush=True)
     hf_hub_download(
-        repo_id="jwohlwend/minifold",
+        repo_id=ESM2_HF_REPO,
         filename=ckpt_name,
         local_dir=WEIGHTS,
         local_dir_use_symlinks=False,

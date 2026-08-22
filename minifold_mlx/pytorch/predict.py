@@ -71,15 +71,27 @@ def get_device():
         return torch.device("cpu")
 
 
+_HPARAMS = {
+    "48L": {"esm_model_name": "esm2_t36_3B_UR50D", "num_blocks": 48, "no_bins": 64},
+    "12L": {"esm_model_name": "esm2_t36_3B_UR50D", "num_blocks": 12, "no_bins": 64},
+}
+
+
 def create_model(checkpoint, device, compile=False, kernels=False):
-    # Load checkpoint
-    ckpt = torch.load(checkpoint, map_location="cpu")
-    hparams = ckpt["hyper_parameters"]
+    checkpoint = str(checkpoint)
+    if checkpoint.endswith(".safetensors"):
+        from safetensors.torch import load_file
+        state_dict = load_file(checkpoint, device="cpu")
+        size = "48L" if "48L" in checkpoint else "12L"
+        hparams = _HPARAMS[size]
+    else:
+        ckpt = torch.load(checkpoint, map_location="cpu")
+        hparams = ckpt["hyper_parameters"]
+        state_dict = ckpt["state_dict"]
 
     if kernels:
         torch._dynamo.config.cache_size_limit = 64
 
-    # Initialize minifold model object
     config_of = model_config(
         "initial_training",
         train=False,
@@ -95,11 +107,8 @@ def create_model(checkpoint, device, compile=False, kernels=False):
         kernels=kernels,
     )
 
-    # Initialize alphabet
     _, alphabet = load_model_and_alphabet(hparams["esm_model_name"])
 
-    # Load pretrained weights
-    state_dict = ckpt["state_dict"]
     state_dict = {k: v for k, v in state_dict.items() if "boundaries" not in k}
     state_dict = {k: v for k, v in state_dict.items() if "mid_points" not in k}
     state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
