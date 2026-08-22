@@ -183,7 +183,11 @@ os.makedirs(ESM2_HUB_DIR, exist_ok=True)
 os.makedirs(VM_CACHE, exist_ok=True)
 os.makedirs(UV_PKG_CACHE, exist_ok=True)
 
+def step(msg):
+    print(f"\\n=== {{msg}} ===", flush=True)
+
 # rclone must be downloaded before Drive is accessible — cannot be cached on Drive
+step("Installing rclone")
 RCLONE_VERSION = "{RCLONE_VERSION}"
 rclone_zip = f"/tmp/rclone-{{RCLONE_VERSION}}-linux-amd64.zip"
 rclone_url = f"https://github.com/rclone/rclone/releases/download/{{RCLONE_VERSION}}/rclone-{{RCLONE_VERSION}}-linux-amd64.zip"
@@ -191,13 +195,13 @@ run("curl", "-fsSL", rclone_url, "-o", rclone_zip)
 run("unzip", "-q", "-o", rclone_zip, "-d", "/tmp/rclone_bin")
 run("cp", f"/tmp/rclone_bin/rclone-{{RCLONE_VERSION}}-linux-amd64/rclone", "/usr/local/bin/rclone")
 
-# Show allocated GPU
+step("GPU info")
 run("nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader")
 
-# Pull cached weights + vm_cache from Drive
+step("Pulling weights from Drive")
 rclone_copy(WEIGHTS_REMOTE, WEIGHTS)
 
-# Install uv from Drive cache or pip
+step("Installing uv")
 new_downloads = False
 import shutil
 if os.path.exists(UV_BIN_CACHE):
@@ -211,7 +215,7 @@ else:
         shutil.copy(uv_path, UV_BIN_CACHE)
     new_downloads = True
 
-# Clone MiniFoldX (includes vendored PyTorch inference code)
+step("Setting up MiniFoldX code")
 os.environ["UV_CACHE_DIR"] = UV_PKG_CACHE
 MINIFOLDX_DIR = "/content/MiniFoldX"
 PYTORCH_DIR   = f"{{MINIFOLDX_DIR}}/minifold_mlx/pytorch"
@@ -223,13 +227,14 @@ else:
     run("tar", "-czf", MINIFOLD_TAR, "-C", "/content", "MiniFoldX")
     new_downloads = True
 
+step("Installing Python dependencies")
 run("uv", "pip", "install", "--system", "-e", PYTORCH_DIR,
     "huggingface_hub", "fair-esm", "safetensors", "ml_collections",
     "dm-tree", "modelcif", "einops", "edit_distance")
 {int8_install}
 {triton_install}
 
-# Seed torch hub cache with ESM2 fp16 weights from HF (avoids slow Meta download)
+step("Preparing ESM2 weights")
 os.environ.setdefault("HF_HUB_ENABLE_HF_XET", "1")
 from huggingface_hub import hf_hub_download
 if not os.path.exists(ESM2_PT_PATH):
@@ -245,18 +250,13 @@ if not os.path.exists(ESM2_PT_PATH):
     import torch
     from safetensors.torch import load_file
     state = load_file(st_tmp)
-    # Reconstruct the structure fair-esm expects: {{'model': state_dict}}
-    # cfg/args are not needed for loading weights into a pre-constructed model;
-    # fair-esm's load_model_and_alphabet_core_v2 reads architecture from cfg but
-    # esm2_t36_3B_UR50D() hard-codes the arch before loading weights, so saving
-    # just the model state dict under 'model' is sufficient for cache re-use.
     torch.save({{'model': state}}, ESM2_PT_PATH)
     print(f"ESM2 cached to {{ESM2_PT_PATH}}", flush=True)
     new_downloads = True
 else:
     print("Using cached ESM2 weights", flush=True)
 
-# Download minifold checkpoint via HF Hub (resumable, cached)
+step("Preparing MiniFold checkpoint")
 ckpt_name = f"minifold_{{MODEL_SIZE}}_final.ckpt"
 ckpt_dest = os.path.join(WEIGHTS, ckpt_name)
 if not os.path.exists(ckpt_dest):
@@ -272,10 +272,10 @@ else:
     print(f"Using cached {{ckpt_name}}", flush=True)
 
 {int8_wrapper}
-# Run prediction
+step("Running structure prediction")
 {predict_invocation}
 
-# Push weights to Drive only if new files were downloaded this run
+step("Saving weights to Drive")
 if new_downloads:
     print("Pushing new weights to Drive cache ...", flush=True)
     rclone_copy(WEIGHTS, WEIGHTS_REMOTE)
