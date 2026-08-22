@@ -70,21 +70,23 @@ def make_job_script(
     predict_invocation = (
         f'run(sys.executable, "/content/minifold_predict_int8.py",\n'
         f'    FASTA, "--out_dir", OUTPUTS, "--cache", WEIGHTS,\n'
+        f'    "--checkpoint", CKPT_PATH,\n'
         f'    "--model_size", MODEL_SIZE, "--token_per_batch", str(TOKEN_PER_BATCH){kernels_flag})'
         if int8_esm2 else
         f'run(sys.executable, {predict_script},\n'
         f'    FASTA, "--out_dir", OUTPUTS, "--cache", WEIGHTS,\n'
+        f'    "--checkpoint", CKPT_PATH,\n'
         f'    "--model_size", MODEL_SIZE, "--token_per_batch", str(TOKEN_PER_BATCH){kernels_flag})'
     )
 
     int8_install = (
-        'run("uv", "pip", "install", "-q", "--system", "bitsandbytes")'
+        'run("uv", "pip", "install", "--system", "bitsandbytes")'
         if int8_esm2 else
         '# (standard precision ESM2)'
     )
 
     triton_install = (
-        'run("uv", "pip", "install", "-q", "--system", "triton")'
+        'run("uv", "pip", "install", "--system", "triton")'
         if triton_kernels else
         '# (standard PyTorch ops)'
     )
@@ -154,13 +156,19 @@ ESM2_HF_REPO  = "z-ardern/MiniFoldX_weights"
 ESM2_HF_FILE  = "ESM2_fp16/esm2_t36_3B_UR50D_fp16.safetensors"
 ESM2_HUB_DIR  = os.path.join(WEIGHTS, "hub", "checkpoints")
 ESM2_PT_PATH  = os.path.join(ESM2_HUB_DIR, "esm2_t36_3B_UR50D.pt")
+CKPT_PATH     = os.path.join(WEIGHTS, f"minifold_{{MODEL_SIZE}}_final.ckpt")
 
 # Point torch hub (and fair-esm) at our Drive-cached weights dir
 os.environ["TORCH_HOME"] = WEIGHTS
 
 def run(*cmd):
     print("+", " ".join(str(c) for c in cmd), flush=True)
-    subprocess.run(list(cmd), check=True)
+    import sys as _sys
+    r = subprocess.run(list(cmd), stderr=subprocess.PIPE)
+    if r.returncode != 0:
+        if r.stderr:
+            print(r.stderr.decode(errors="replace"), file=_sys.stderr, flush=True)
+        raise subprocess.CalledProcessError(r.returncode, list(cmd))
 
 def rclone_copy(src, dst, *extra):
     # Exit code 3 = source directory not found (normal on first run); treat as no-op.
@@ -215,8 +223,9 @@ else:
     run("tar", "-czf", MINIFOLD_TAR, "-C", "/content", "MiniFoldX")
     new_downloads = True
 
-run("uv", "pip", "install", "-q", "--system", "-e", PYTORCH_DIR,
-    "huggingface_hub", "safetensors")
+run("uv", "pip", "install", "--system", "-e", PYTORCH_DIR,
+    "huggingface_hub", "fair-esm", "safetensors", "ml_collections",
+    "dm-tree", "modelcif", "einops", "edit_distance")
 {int8_install}
 {triton_install}
 
