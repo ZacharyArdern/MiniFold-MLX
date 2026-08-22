@@ -104,8 +104,8 @@ def create_model(checkpoint, device, compile=False, kernels=False):
         use_structure_module=True,
         kernels=kernels,
     )
-    # Convert ESM2 to fp16 before state_dict load to avoid fp32 peak (~7GB → ~3.5GB)
-    model.esm = model.esm.half()
+    # Convert ESM2 to fp16 if not already (e.g. when loaded from fp32 fbaipublicfiles .pt)
+    model.lm = model.lm.half()
 
     # Get alphabet without loading ESM2 weights a second time
     from esm.data import Alphabet

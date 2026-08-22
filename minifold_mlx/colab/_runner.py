@@ -157,8 +157,17 @@ UV_BIN_CACHE  = os.path.join(VM_CACHE, "uv")
 MINIFOLD_TAR  = os.path.join(VM_CACHE, "minifold.tar.gz")
 UV_PKG_CACHE  = os.path.join(VM_CACHE, "uv_packages")
 ESM2_HF_REPO  = "z-ardern/MiniFoldX_weights"
-ESM2_HUB_DIR  = os.path.join(WEIGHTS, "hub", "checkpoints")
-ESM2_PT_PATH  = os.path.join(ESM2_HUB_DIR, "esm2_t36_3B_UR50D.pt")
+# torch.hub checkpoints path varies by PyTorch version:
+#   newer (2.x):  $TORCH_HOME/hub/checkpoints/
+#   older:        $TORCH_HOME/checkpoints/
+# Support both so the Drive cache is found regardless.
+_ESM2_FNAME   = "esm2_t36_3B_UR50D.pt"
+_ESM2_CANDIDATES = [
+    os.path.join(WEIGHTS, "checkpoints",       _ESM2_FNAME),
+    os.path.join(WEIGHTS, "hub", "checkpoints", _ESM2_FNAME),
+]
+ESM2_PT_PATH = next((p for p in _ESM2_CANDIDATES if os.path.exists(p)), _ESM2_CANDIDATES[0])
+ESM2_HUB_DIR = os.path.dirname(ESM2_PT_PATH)
 CKPT_PATH     = os.path.join(WEIGHTS, f"minifold_{{MODEL_SIZE}}.safetensors")
 
 # Point torch hub (and fair-esm) at our Drive-cached weights dir
@@ -295,6 +304,9 @@ else:
 
 # ESM2 is downloaded by torch hub (TORCH_HOME=WEIGHTS) on first run,
 # then pushed to Drive after predict so subsequent runs skip the download.
+# Re-evaluate ESM2_PT_PATH now that the Drive pull has completed.
+ESM2_PT_PATH = next((p for p in _ESM2_CANDIDATES if os.path.exists(p)), _ESM2_CANDIDATES[0])
+ESM2_HUB_DIR = os.path.dirname(ESM2_PT_PATH)
 esm2_cached_before = os.path.exists(ESM2_PT_PATH)
 if esm2_cached_before:
     print(f"ESM2 weights cached at {{ESM2_PT_PATH}}", flush=True)
@@ -307,9 +319,14 @@ step("Running structure prediction")
 
 OUT_DEST = "{out_dest}"
 
+# After predict, cache ESM2 to Drive at whichever path torch hub used.
+ESM2_PT_PATH = next((p for p in _ESM2_CANDIDATES if os.path.exists(p)), _ESM2_CANDIDATES[0])
+ESM2_HUB_DIR = os.path.dirname(ESM2_PT_PATH)
+# Compute the relative sub-path under WEIGHTS to use as the Drive remote sub-path.
+_esm2_rel = os.path.relpath(ESM2_HUB_DIR, WEIGHTS)
 if not esm2_cached_before and os.path.exists(ESM2_PT_PATH):
     step("Caching ESM2 to Drive")
-    rclone_copy(ESM2_HUB_DIR, f"{{WEIGHTS_REMOTE}}/hub/checkpoints")
+    rclone_copy(ESM2_HUB_DIR, f"{{WEIGHTS_REMOTE}}/{{_esm2_rel}}")
 
 step("Saving results")
 if OUT_DEST in ("both", "drive"):
