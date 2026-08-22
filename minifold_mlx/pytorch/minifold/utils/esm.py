@@ -171,6 +171,7 @@ def load_hub_workaround(url):
         data = torch.load(
             f"{torch.hub.get_dir()}/checkpoints/{fn}",
             map_location="cpu",
+            weights_only=False,
         )
     except urllib.error.HTTPError as e:
         raise Exception(f"Could not load {url}, check if you specified a correct model name?")
@@ -207,17 +208,49 @@ def _load_model_and_alphabet_core_v2(model_data):
         state_dict = {pattern.sub("", name): param for name, param in state_dict.items()}
         return state_dict
 
-    cfg = model_data["cfg"]["model"]
     state_dict = model_data["model"]
     state_dict = upgrade_state_dict(state_dict)
     alphabet = esm.data.Alphabet.from_architecture("ESM-1b")
+
+    # Get architecture config; fall back to ESM2-3B defaults when cfg is absent
+    # (e.g. when loading from a stripped fp16 cache that omits non-tensor metadata)
+    if "cfg" in model_data:
+        cfg = model_data["cfg"]["model"]
+        num_layers     = cfg.encoder_layers
+        embed_dim      = cfg.encoder_embed_dim
+        attention_heads = cfg.encoder_attention_heads
+        token_dropout  = cfg.token_dropout
+    else:
+        layer_indices = {
+            int(k.split(".")[1])
+            for k in state_dict
+            if k.startswith("layers.") and k.split(".")[1].isdigit()
+        }
+        num_layers      = (max(layer_indices) + 1) if layer_indices else 36
+        embed_dim       = state_dict["embed_tokens.weight"].shape[1]
+        attention_heads = max(1, embed_dim // 64)
+        token_dropout   = True
+        print(
+            f"ESM2 cfg not found in checkpoint; inferred: "
+            f"{num_layers} layers, embed_dim={embed_dim}, heads={attention_heads}",
+            flush=True,
+        )
+
+    # Detect fp16 weights and initialise the model in matching dtype to avoid
+    # a temporary fp32+fp16 memory spike when calling .half() afterwards.
+    sample = next(iter(state_dict.values()))
+    dtype = sample.dtype
+
     model = ESM2(
-        num_layers=cfg.encoder_layers,
-        embed_dim=cfg.encoder_embed_dim,
-        attention_heads=cfg.encoder_attention_heads,
+        num_layers=num_layers,
+        embed_dim=embed_dim,
+        attention_heads=attention_heads,
         alphabet=alphabet,
-        token_dropout=cfg.token_dropout,
+        token_dropout=token_dropout,
     )
+    if dtype == torch.float16:
+        model = model.half()
+
     return model, alphabet, state_dict
 
 

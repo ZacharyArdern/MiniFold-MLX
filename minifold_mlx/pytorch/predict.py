@@ -8,7 +8,6 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from Bio import SeqIO
-from esm.pretrained import load_model_and_alphabet
 
 from minifold.model.model import MiniFoldModel
 from minifold.utils.residue_constants import restype_order_with_x
