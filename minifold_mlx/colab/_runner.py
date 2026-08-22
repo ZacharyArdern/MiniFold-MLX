@@ -65,6 +65,8 @@ def make_job_script(
     out_dest: str = "both",
 ) -> str:
     """Return a Python script that runs on the Colab VM."""
+    import subprocess as _sp
+    _commit = _sp.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 
     kernels_flag = ', "--kernels"' if triton_kernels else ''
     predict_script = '"/content/MiniFoldX/minifold_mlx/pytorch/predict.py"'
@@ -224,12 +226,18 @@ step("Setting up MiniFoldX code")
 os.environ["UV_CACHE_DIR"] = UV_PKG_CACHE
 MINIFOLDX_DIR = "/content/MiniFoldX"
 PYTORCH_DIR   = f"{{MINIFOLDX_DIR}}/minifold_mlx/pytorch"
-if os.path.exists(MINIFOLD_TAR):
-    print("Using cached MiniFoldX repo", flush=True)
+MINIFOLD_TAR_COMMIT = "{_commit}"
+MINIFOLD_TAR_STAMP  = os.path.join(VM_CACHE, "minifold_commit.txt")
+cached_commit = open(MINIFOLD_TAR_STAMP).read().strip() if os.path.exists(MINIFOLD_TAR_STAMP) else ""
+if os.path.exists(MINIFOLD_TAR) and cached_commit == MINIFOLD_TAR_COMMIT:
+    print(f"Using cached MiniFoldX repo ({{MINIFOLD_TAR_COMMIT[:8]}})", flush=True)
     run("tar", "-xzf", MINIFOLD_TAR, "-C", "/content")
 else:
+    if cached_commit and cached_commit != MINIFOLD_TAR_COMMIT:
+        print(f"Code updated ({{cached_commit[:8]}} → {{MINIFOLD_TAR_COMMIT[:8]}}), re-cloning ...", flush=True)
     run("git", "clone", "--depth=1", "https://github.com/ZacharyArdern/MiniFoldX.git", MINIFOLDX_DIR)
     run("tar", "-czf", MINIFOLD_TAR, "-C", "/content", "MiniFoldX")
+    open(MINIFOLD_TAR_STAMP, "w").write(MINIFOLD_TAR_COMMIT)
     new_vm_cache = True
 
 step("Installing Python dependencies")

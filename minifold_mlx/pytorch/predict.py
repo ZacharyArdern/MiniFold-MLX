@@ -85,7 +85,7 @@ def create_model(checkpoint, device, compile=False, kernels=False):
         size = "48L" if "48L" in checkpoint else "12L"
         hparams = _HPARAMS[size]
     else:
-        ckpt = torch.load(checkpoint, map_location="cpu")
+        ckpt = torch.load(checkpoint, map_location="cpu", weights_only=False)
         hparams = ckpt["hyper_parameters"]
         state_dict = ckpt["state_dict"]
 
