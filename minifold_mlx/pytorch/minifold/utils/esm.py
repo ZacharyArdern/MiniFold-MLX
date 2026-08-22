@@ -236,20 +236,18 @@ def _load_model_and_alphabet_core_v2(model_data):
             flush=True,
         )
 
-    # Detect fp16 weights and initialise the model in matching dtype to avoid
-    # a temporary fp32+fp16 memory spike when calling .half() afterwards.
-    sample = next(iter(state_dict.values()))
-    dtype = sample.dtype
-
-    model = ESM2(
-        num_layers=num_layers,
-        embed_dim=embed_dim,
-        attention_heads=attention_heads,
-        alphabet=alphabet,
-        token_dropout=token_dropout,
-    )
-    if dtype == torch.float16:
-        model = model.half()
+    # Create the model structure on the meta device (zero RAM — no random init
+    # allocation) so that load_state_dict(assign=True) can attach the state-dict
+    # tensors directly without ever holding both fp32 init weights and the fp16
+    # checkpoint in memory simultaneously.
+    with torch.device("meta"):
+        model = ESM2(
+            num_layers=num_layers,
+            embed_dim=embed_dim,
+            attention_heads=attention_heads,
+            alphabet=alphabet,
+            token_dropout=token_dropout,
+        )
 
     return model, alphabet, state_dict
 
@@ -285,6 +283,13 @@ def load_model_and_alphabet(model_name):
                 "Regression weights not found, predicting contacts will not produce correct results."
             )
 
-    model.load_state_dict(model_state, strict=regression_data is not None)
+    # assign=True attaches state-dict tensors directly to model parameters
+    # without allocating a second copy — critical for low-memory GPUs (T4).
+    # strict=False: our cached fp16 .pt omits the contact-regression head.
+    # Falls back to the normal copy path on older PyTorch without assign.
+    try:
+        model.load_state_dict(model_state, strict=False, assign=True)
+    except TypeError:
+        model.load_state_dict(model_state, strict=False)
 
     return model, alphabet
