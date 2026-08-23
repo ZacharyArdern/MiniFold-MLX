@@ -1,6 +1,6 @@
-# MiniFold-MLX
+# MiniFoldX
 
-An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using the [MLX](https://github.com/ml-explore/mlx) framework. Runs protein structure prediction entirely on Apple Silicon GPU/Neural Engine with no PyTorch dependency at inference time.
+An extension of [MiniFold](https://github.com/jwohlwend/minifold) with multiple compute backends for protein structure prediction: Apple Silicon GPU via [MLX](https://github.com/ml-explore/mlx) (no PyTorch required), Google Colab GPU launched directly from the terminal, standard CUDA GPU, and CPU.
 
 ## Features
 
@@ -12,7 +12,8 @@ An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using
 - Simple three-function public API: `load_model`, `predict_sequence`, `predict_batch`
 - Pre-converted weights hosted on HuggingFace for fast download-on-first-use
 - `--colab` backend: run on a Colab GPU with results downloaded locally
-- CUDA support (same as standard MiniFold) with added `--int8-esm2`, `--num_recycling`, and safetensors fast-loading
+- CUDA and CPU backends (same PyTorch path as standard MiniFold) with added `--int8-esm2`, `--num_recycling`, and safetensors fast-loading
+- `--cpu` backend: PyTorch CPU inference using all available cores
 
 ## Installation
 
@@ -87,6 +88,14 @@ Added options:
 - `--int8-esm2`: quantize ESM2 to int8 via bitsandbytes (~3× smaller GPU memory footprint; requires `pip install bitsandbytes`)
 - `--num_recycling N`: set recycling iterations (default 3; 0 for fastest inference)
 - Safetensors weights (hosted on HuggingFace as `z-ardern/MiniFoldX_weights`) load faster than the original `.ckpt` format and are used automatically when `--checkpoint` points to a `.safetensors` file
+
+### CPU
+
+```bash
+minifoldx --cpu seqs.fasta --out_dir ./structures
+```
+
+Runs the PyTorch backend on CPU using all available cores. No GPU required. Slower than CUDA but useful for small jobs or environments without a GPU.
 
 ## Weights
 

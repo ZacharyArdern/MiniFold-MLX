@@ -268,6 +268,12 @@ def prepare_input(seq, config, alphabet):
     is_flag=True,
     help="Quantize ESM2 to int8 via bitsandbytes (~3x smaller, saves GPU memory).",
 )
+@click.option(
+    "--cpu",
+    "force_cpu",
+    is_flag=True,
+    help="Force CPU inference using all available cores (overrides CUDA/MPS detection).",
+)
 def predict(
     fasta: str,
     out_dir: str = "./minifold_predictions",
@@ -279,6 +285,7 @@ def predict(
     kernels: bool = False,
     num_recycling: int = 3,
     int8_esm2: bool = False,
+    force_cpu: bool = False,
 ) -> None:
     """Run predictions with Minifold."""
     # Set no grad
@@ -303,7 +310,12 @@ def predict(
         checkpoint = cache / f"minifold_{model_size}.ckpt"
 
     # Detect device
-    device = get_device()
+    if force_cpu:
+        import os
+        device = torch.device("cpu")
+        torch.set_num_threads(os.cpu_count() or 1)
+    else:
+        device = get_device()
     print(f"Using device: {device}")
 
     # Set hub cache
