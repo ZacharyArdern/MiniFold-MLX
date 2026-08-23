@@ -7,11 +7,11 @@ from __future__ import annotations
 import numpy as np
 import mlx.core as mx
 
-from minifold_mlx.utils.residue_constants import (
+from minifoldx.utils.residue_constants import (
     restype_order_with_x,
     restype_order_with_x_inverse,
 )
-from minifold_mlx.utils.protein import Protein, to_pdb
+from minifoldx.utils.protein import Protein, to_pdb
 
 
 # ── Input preparation ─────────────────────────────────────────────────────────

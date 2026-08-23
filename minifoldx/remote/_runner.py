@@ -72,7 +72,7 @@ def setup_remote(host: str) -> None:
     """Ensure MiniFoldX is cloned/updated and deps installed on the remote."""
     ssh_stream(host, f"mkdir -p {REMOTE_CODE} {REMOTE_WEIGHTS} {REMOTE_JOBS}")
 
-    result = ssh_check(host, f"test -f {REMOTE_CODE}/minifold_mlx/pytorch/predict.py && echo yes || echo no")
+    result = ssh_check(host, f"test -f {REMOTE_CODE}/minifoldx/pytorch/predict.py && echo yes || echo no")
     if "yes" in result.stdout:
         click.echo("  MiniFoldX already installed — checking for updates ...")
         ssh_stream(host, f"git -C {REMOTE_CODE} fetch --depth=1 origin HEAD && git -C {REMOTE_CODE} reset --hard FETCH_HEAD 2>/dev/null || true")
@@ -80,7 +80,7 @@ def setup_remote(host: str) -> None:
         click.echo("  Cloning MiniFoldX ...")
         ssh_stream(host, f"git clone --depth=1 {REPO_URL} {REMOTE_CODE}")
 
-    pytorch_dir = f"{REMOTE_CODE}/minifold_mlx/pytorch"
+    pytorch_dir = f"{REMOTE_CODE}/minifoldx/pytorch"
     ssh_stream(host, (
         f"pip install -q -e {pytorch_dir} "
         "fair-esm safetensors ml_collections dm-tree modelcif einops edit_distance "
@@ -122,7 +122,7 @@ def run_remote(
     scp_upload(fasta_path, host, remote_fasta)
 
     click.echo(f"[3/4] Running prediction (model={model_size}, recycling={num_recycling}) ...")
-    predict_py = f"{REMOTE_CODE}/minifold_mlx/pytorch/predict.py"
+    predict_py = f"{REMOTE_CODE}/minifoldx/pytorch/predict.py"
     ssh_stream(host, (
         f"HF_HUB_ENABLE_HF_XET=1 "
         f"python {predict_py} {remote_fasta} "

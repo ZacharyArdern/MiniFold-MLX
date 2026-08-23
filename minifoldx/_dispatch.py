@@ -27,16 +27,16 @@ def main() -> None:
         argv = argv[:idx] + argv[idx + 2:]
         argv = [a for a in argv if a not in ("--mlx", "--colab")]
         sys.argv = [sys.argv[0], "--host", host] + argv
-        from minifold_mlx.remote.cli import main as remote_main
+        from minifoldx.remote.cli import main as remote_main
         remote_main()
     elif "--colab" in argv:
         argv.remove("--colab")
         argv = [a for a in argv if a != "--mlx"]
         sys.argv = [sys.argv[0]] + argv
-        from minifold_mlx.colab.cli import main as colab_main
+        from minifoldx.colab.cli import main as colab_main
         colab_main()
     else:
         argv = [a for a in argv if a != "--mlx"]
         sys.argv = [sys.argv[0]] + argv
-        from minifold_mlx.cli import main as mlx_main
+        from minifoldx.cli import main as mlx_main
         mlx_main()

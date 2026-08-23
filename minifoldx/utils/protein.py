@@ -21,7 +21,7 @@ import re
 import string
 import os
 
-from minifold_mlx.utils import residue_constants
+from minifoldx.utils import residue_constants
 from Bio.PDB import PDBParser
 import numpy as np
 import modelcif
@@ -33,7 +33,7 @@ import modelcif.alignment
 import modelcif.qa_metric
 
 # from mp_nerf.kb_proteins import SUPREME_INFO
-from minifold_mlx.utils.residue_constants import restype_order_with_x_inverse
+from minifoldx.utils.residue_constants import restype_order_with_x_inverse
 
 
 FeatureDict = Mapping[str, np.ndarray]

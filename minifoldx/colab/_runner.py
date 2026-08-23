@@ -78,7 +78,7 @@ def make_job_script(
     _repo = Path(__file__).resolve().parent.parent.parent
     _commit = _sp.run(["git", "-C", str(_repo), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 
-    predict_script = '"/content/MiniFoldX/minifold_mlx/pytorch/predict.py"'
+    predict_script = '"/content/MiniFoldX/minifoldx/pytorch/predict.py"'
     extra_flags = ""
     if triton_kernels:
         extra_flags += ', "--kernels"'
@@ -213,7 +213,7 @@ else:
 step("Setting up MiniFoldX code")
 os.environ["UV_CACHE_DIR"] = UV_PKG_CACHE
 MINIFOLDX_DIR = "/content/MiniFoldX"
-PYTORCH_DIR   = f"{{MINIFOLDX_DIR}}/minifold_mlx/pytorch"
+PYTORCH_DIR   = f"{{MINIFOLDX_DIR}}/minifoldx/pytorch"
 MINIFOLD_TAR_COMMIT = "{_commit}"
 MINIFOLD_TAR_STAMP  = os.path.join(VM_CACHE, "minifold_commit.txt")
 cached_commit = open(MINIFOLD_TAR_STAMP).read().strip() if os.path.exists(MINIFOLD_TAR_STAMP) else ""

@@ -24,9 +24,9 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 
-from minifold_mlx._miniformer import MiniFormer
-from minifold_mlx._structure import StructureModuleMLX
-from minifold_mlx._heads import AuxiliaryHeadsMLX
+from minifoldx._miniformer import MiniFormer
+from minifoldx._structure import StructureModuleMLX
+from minifoldx._heads import AuxiliaryHeadsMLX
 
 
 # ── Sequential-key flattening ─────────────────────────────────────────────────
@@ -217,7 +217,7 @@ class MiniFoldMLX(nn.Module):
         from mlx_esm import ESM2  # vincentamato/mlx-esm-2
         tokenizer, esm = ESM2.from_pretrained("./minifold_cache/checkpoints")
 
-        model = MiniFoldMLX.from_pretrained("./minifold_mlx_48L", esm_model=esm)
+        model = MiniFoldMLX.from_pretrained("./minifoldx_48L", esm_model=esm)
 
         tokens_mx = tokenizer(sequences)
         output    = model(tokens_mx)
@@ -451,7 +451,7 @@ class MiniFoldMLX(nn.Module):
           ``final_atom_positions``(np.ndarray, B×T×37×3) — only when aatype_mx given
           ``final_atom_mask``     (np.ndarray, B×T×37)   — only when aatype_mx given
         """
-        from minifold_mlx._rigid import build_all_atom_positions
+        from minifoldx._rigid import build_all_atom_positions
 
         esm_model = object.__getattribute__(self, "_esm_model")
         num_layers = object.__getattribute__(self, "_esm_num_layers")

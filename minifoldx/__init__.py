@@ -1,4 +1,4 @@
-"""minifold_mlx — MLX MiniFold structure prediction package.
+"""minifoldx — MLX MiniFold structure prediction package.
 
 Public API
 ----------
@@ -18,8 +18,8 @@ from typing import Optional
 import numpy as np
 import mlx.core as mx
 
-from minifold_mlx._model import MiniFoldMLX
-from minifold_mlx._data import (
+from minifoldx._model import MiniFoldMLX
+from minifoldx._data import (
     prepare_input,
     pad_tokens,
     pad_mask,
@@ -72,7 +72,7 @@ def load_model(
     if fp16 and bf16:
         raise ValueError("bf16 and fp16 are mutually exclusive")
 
-    from minifold_mlx.esm2 import ESM2
+    from minifoldx.esm2 import ESM2
 
     print(f"Loading MLX ESM2 from {mlx_esm_path} …")
     tokenizer, esm_model = ESM2.from_pretrained(mlx_esm_path)

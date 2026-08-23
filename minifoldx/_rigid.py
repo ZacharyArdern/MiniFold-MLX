@@ -20,7 +20,7 @@ from __future__ import annotations
 import numpy as np
 import mlx.core as mx
 
-from minifold_mlx.utils.residue_constants import (
+from minifoldx.utils.residue_constants import (
     restype_rigid_group_default_frame,   # (21, 8, 4, 4)
     restype_atom14_to_rigid_group,        # (21, 14)
     restype_atom14_mask,                  # (21, 14)

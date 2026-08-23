@@ -69,7 +69,7 @@ def main():
 
     import mlx.core as mx
     import mlx.nn as nn_mlx
-    from minifold_mlx.esm2 import ESM2
+    from minifoldx.esm2 import ESM2
 
     print(f"\nLoading ESM2 from {input_path} …")
     t0 = time.perf_counter()

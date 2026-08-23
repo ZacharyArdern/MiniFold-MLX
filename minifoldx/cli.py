@@ -83,7 +83,7 @@ def _run(sequences, args, out_dir):
     use_quantized_esm = not args.non_quantized_esm2
     esm_path, minifold_path = _get_weights(args.model_size, use_quantized_esm)
 
-    from minifold_mlx import load_model, predict_sequence
+    from minifoldx import load_model, predict_sequence
 
     print(f"\nLoading model ({args.model_size}) …")
     tokenizer, model = load_model(esm_path, minifold_path, bf16=False, fp16=False)

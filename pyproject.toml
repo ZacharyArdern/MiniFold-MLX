@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     # All pure-MLX/numpy — no PyTorch required for inference.
-    # ESM2 is vendored in minifold_mlx/esm2/.
+    # ESM2 is vendored in minifoldx/esm2/.
     "mlx >= 0.16.0",
     "numpy",
     "tqdm",
@@ -30,13 +30,13 @@ dev = [
 ]
 
 [project.scripts]
-minifoldx = "minifold_mlx._dispatch:main"
+minifoldx = "minifoldx._dispatch:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 
 [tool.setuptools.package-data]
-minifold_mlx = [
+minifoldx = [
     "utils/stereo_chemical_props.txt",
     "esm2/*.py",
 ]
@@ -50,11 +50,11 @@ minifold_mlx = [
 #   uv pip install git+https://github.com/ZacharyArdern/MiniFoldX
 #
 # Quick start:
-#   from minifold_mlx import load_model, predict_batch, get_of_config
+#   from minifoldx import load_model, predict_batch, get_of_config
 #
 #   tokenizer, model = load_model(
 #       mlx_esm_path      = "path/to/checkpoints/mlx-esm2_t36_3B_UR50D_finetuned",
-#       mlx_minifold_path = "path/to/minifold_mlx_48L",
+#       mlx_minifold_path = "path/to/minifoldx_48L",
 #   )
 #   results = predict_batch(
 #       [("prot1", "MKVL..."), ("prot2", "MSYL...")],

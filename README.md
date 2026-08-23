@@ -73,10 +73,10 @@ minifoldx --colab fetch JOB_ID
 
 ### CUDA / HPC
 
-MiniFoldX can also be run on any CUDA GPU, the same as standard [MiniFold](https://github.com/jwohlwend/minifold), using `minifold_mlx/pytorch/predict.py`. Several options are added beyond the standard MiniFold CLI:
+MiniFoldX can also be run on any CUDA GPU, the same as standard [MiniFold](https://github.com/jwohlwend/minifold), using `minifoldx/pytorch/predict.py`. Several options are added beyond the standard MiniFold CLI:
 
 ```bash
-python minifold_mlx/pytorch/predict.py seqs.fasta \
+python minifoldx/pytorch/predict.py seqs.fasta \
     --out_dir ./structures \
     --model_size 48L \
     --num_recycling 3 \
@@ -113,7 +113,7 @@ minifold_path = f"{weights}/minifold_48L"
 ## Use in Python
 
 ```python
-from minifold_mlx import load_model, predict_sequence, predict_batch
+from minifoldx import load_model, predict_sequence, predict_batch
 
 tokenizer, model = load_model(
     mlx_esm_path      = "path/to/esm2",
