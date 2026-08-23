@@ -75,7 +75,28 @@ _HPARAMS = {
 }
 
 
-def create_model(checkpoint, device, compile=False, kernels=False):
+def _quantize_esm2_int8(module) -> None:
+    import bitsandbytes as bnb
+    import torch.nn as nn
+    for name, child in list(module.named_children()):
+        if isinstance(child, nn.Linear):
+            q = bnb.nn.Linear8bitLt(
+                child.in_features, child.out_features,
+                bias=child.bias is not None,
+                has_fp16_weights=False,
+                threshold=6.0,
+            )
+            q.weight = bnb.nn.Int8Params(
+                child.weight.data.clone(), requires_grad=False, has_fp16_weights=False
+            )
+            if child.bias is not None:
+                q.bias = nn.Parameter(child.bias.data.clone())
+            setattr(module, name, q)
+        else:
+            _quantize_esm2_int8(child)
+
+
+def create_model(checkpoint, device, compile=False, kernels=False, int8_esm2=False):
     checkpoint = str(checkpoint)
     if checkpoint.endswith(".safetensors"):
         from safetensors.torch import load_file
@@ -116,6 +137,10 @@ def create_model(checkpoint, device, compile=False, kernels=False):
     state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
     state_dict = {k.replace("model.", ""): v for k, v in state_dict.items()}
     model.load_state_dict(state_dict, strict=False)
+
+    if int8_esm2:
+        print("Quantizing ESM2 to int8 (bitsandbytes) ...", flush=True)
+        _quantize_esm2_int8(model.lm)
 
     # Compile folding block
     if compile:
@@ -231,6 +256,18 @@ def prepare_input(seq, config, alphabet):
     is_flag=True,
     help="Whether to use kernels. Default is False.",
 )
+@click.option(
+    "--num_recycling",
+    type=int,
+    default=3,
+    help="Number of recycling iterations. Default is 3.",
+)
+@click.option(
+    "--int8-esm2",
+    "int8_esm2",
+    is_flag=True,
+    help="Quantize ESM2 to int8 via bitsandbytes (~3x smaller, saves GPU memory).",
+)
 def predict(
     fasta: str,
     out_dir: str = "./minifold_predictions",
@@ -241,6 +278,7 @@ def predict(
     model_size: str = "48L",
     kernels: bool = False,
     num_recycling: int = 3,
+    int8_esm2: bool = False,
 ) -> None:
     """Run predictions with Minifold."""
     # Set no grad
@@ -276,7 +314,7 @@ def predict(
 
     # Load checkpoint
     print("Load model...")
-    alphabet, model = create_model(checkpoint, device, compile)
+    alphabet, model = create_model(checkpoint, device, compile, kernels=kernels, int8_esm2=int8_esm2)
 
     # Create batches
     config = model_config(

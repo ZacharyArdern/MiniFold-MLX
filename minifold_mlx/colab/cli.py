@@ -8,8 +8,10 @@ Usage
 
 Requirements
 ------------
-    brew install rclone   (with gdrive remote already configured)
     colab CLI on PATH     (pip install colab-cli)
+
+Optional (for faster repeat runs and Drive result storage):
+    brew install rclone   (with gdrive remote configured)
 
 Drive layout (under My Drive):
     Colab_Data/minifold_colab/weights/   — cached model weights (shared across runs)
@@ -23,7 +25,7 @@ from pathlib import Path
 import click
 
 from ._jobs import load_jobs, save_job
-from ._runner import check_deps, colab, rclone, run_prediction
+from ._runner import check_deps, colab, rclone, run_prediction, _has_drive
 
 GPU_CHOICES = ["T4", "L4", "G4", "H100", "A100"]
 
@@ -36,9 +38,9 @@ def main():
 @main.command()
 @click.argument("fasta", type=click.Path(exists=True))
 @click.option("--gpu",  default="A100", type=click.Choice(GPU_CHOICES), show_default=True)
-@click.option("--model-size", default="48L", type=click.Choice(["12L", "48L"]), show_default=True)
+@click.option("--model-size", "--model", default="48L", type=click.Choice(["12L", "48L"]), show_default=True)
 @click.option("--token-per-batch", default=2048, show_default=True)
-@click.option("--num-recycling",   default=3,    show_default=True)
+@click.option("--num-recycling", "--rec", default=3, show_default=True)
 @click.option("--timeout", default=3600, show_default=True,
               help="Max seconds to wait for prediction to complete.")
 @click.option("--keep", is_flag=True,
@@ -46,7 +48,7 @@ def main():
 @click.option("--int8-esm2", "int8_esm2", is_flag=True,
               help="Quantize ESM2 to int8 via bitsandbytes (~3× smaller, saves GPU memory).")
 @click.option("--triton-kernels", "triton_kernels", is_flag=True,
-              help="Use Triton-fused MLP/gating kernels for faster inference on A100/H100.")
+              help="Use Triton-fused MLP/gating kernels (not recommended — slower on all available Colab GPUs).")
 @click.option("--out", "out_dest", default="both",
               type=click.Choice(["both", "pwd", "drive"]), show_default=True,
               help="Where to save results: both (Drive + local pwd), pwd (local only), drive (Drive only).")
@@ -69,12 +71,29 @@ def run(
     job_id     = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     session    = f"minifold_{job_id}"
 
+    # Count sequences for the long-job warning
+    import gzip as _gz
+    _opener = _gz.open if str(fasta_path).endswith(".gz") else open
+    with _opener(fasta_path, "rt") as _fh:
+        n_seqs = sum(1 for line in _fh if line.startswith(">"))
+
     click.echo(f"Job ID  : {job_id}")
-    click.echo(f"FASTA   : {fasta_path.name}")
+    click.echo(f"FASTA   : {fasta_path.name}  ({n_seqs} sequences)")
     click.echo(f"GPU     : {gpu}  |  model: {model_size}  |  recycling: {num_recycling}")
     click.echo(f"ESM2    : {'int8 / bitsandbytes' if int8_esm2 else 'full precision'}")
     click.echo(f"Kernels : {'Triton (fused MLP/gating)' if triton_kernels else 'standard PyTorch'}")
     click.echo(f"Output  : {out_dest}")
+
+    if n_seqs > 200:
+        if _has_drive() and out_dest in ("both", "drive"):
+            click.echo(f"\nNote: {n_seqs} sequences — results will be checkpointed to Drive every 10 min.")
+        else:
+            click.echo(
+                f"\nWarning: {n_seqs} sequences but Drive is not configured. "
+                "If the connection drops, intermediate results will be lost. "
+                "Consider setting up rclone with a gdrive remote for long jobs.",
+                err=True,
+            )
     click.echo("")
 
     click.echo(f"[1/5] Creating {gpu} session '{session}' ...")
@@ -116,7 +135,8 @@ def run(
 @click.option("--out-dir", default="./minifold_results", show_default=True)
 def fetch(job_id: str, out_dir: str) -> None:
     """Re-download results for JOB_ID from Google Drive."""
-    check_deps()
+    if not _has_drive():
+        raise click.ClickException("Drive not configured. Run: rclone config")
 
     from ._runner import JOBS_REMOTE
     dest = Path(out_dir) / job_id

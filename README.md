@@ -11,6 +11,8 @@ An Apple Silicon port of [MiniFold](https://github.com/jwohlwend/minifold) using
 - 48-layer (full) and 12-layer (fast) MiniFold variants
 - Simple three-function public API: `load_model`, `predict_sequence`, `predict_batch`
 - Pre-converted weights hosted on HuggingFace for fast download-on-first-use
+- `--colab` backend: run on a Colab GPU with results downloaded locally
+- CUDA support (same as standard MiniFold) with added `--int8-esm2`, `--num_recycling`, and safetensors fast-loading
 
 ## Installation
 
@@ -33,6 +35,58 @@ python fold.py example.fasta --out_dir ./structures
 ```
 
 Weights (~3.8 GB) are downloaded automatically on first run. PDB files are saved to `./structures/`.
+
+## Backends
+
+### Apple Silicon (default)
+
+`minifoldx seqs.fasta` runs the native MLX path on the local Mac GPU/Neural Engine. No additional setup required.
+
+### Google Colab GPU
+
+Run predictions on a Colab GPU with results downloaded to your Mac:
+
+```bash
+pip install colab-cli
+
+# Default (48L model, A100, 3 recyclings)
+minifoldx --colab run seqs.fasta --gpu A100
+
+# Lighter/faster
+minifoldx --colab run seqs.fasta --gpu A100 --model 12L --rec 0
+
+# Save GPU memory with int8 ESM2
+minifoldx --colab run seqs.fasta --gpu A100 --int8-esm2
+```
+
+Available GPUs: T4, L4, A100. Results are saved to `./minifold_results/<job_id>/` by default.
+
+**Drive caching (optional):** configure an rclone `gdrive` remote and model weights are cached to Google Drive, making repeat runs significantly faster. For long jobs (>200 sequences), results are checkpointed to Drive every 10 minutes to survive connection loss.
+
+```bash
+# List past jobs
+minifoldx --colab list
+
+# Re-download results from Drive
+minifoldx --colab fetch JOB_ID
+```
+
+### CUDA / HPC
+
+MiniFoldX can also be run on any CUDA GPU, the same as standard [MiniFold](https://github.com/jwohlwend/minifold), using `minifold_mlx/pytorch/predict.py`. Several options are added beyond the standard MiniFold CLI:
+
+```bash
+python minifold_mlx/pytorch/predict.py seqs.fasta \
+    --out_dir ./structures \
+    --model_size 48L \
+    --num_recycling 3 \
+    --int8-esm2
+```
+
+Added options:
+- `--int8-esm2`: quantize ESM2 to int8 via bitsandbytes (~3× smaller GPU memory footprint; requires `pip install bitsandbytes`)
+- `--num_recycling N`: set recycling iterations (default 3; 0 for fastest inference)
+- Safetensors weights (hosted on HuggingFace as `z-ardern/MiniFoldX_weights`) load faster than the original `.ckpt` format and are used automatically when `--checkpoint` points to a `.safetensors` file
 
 ## Weights
 
